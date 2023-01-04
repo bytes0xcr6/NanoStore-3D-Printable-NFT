@@ -11,10 +11,11 @@ contract NFT3D is ERC1155 {
     event NFTMinted(address indexed Owner, uint NFTCollection, uint Amount, uint MintingTime);
     event URIUpdated(uint NFTCollection, string NewURI, uint UpdateTime);
 
-
+    address public owner;
     // 1st NFT collection will be number 0 by default.
     uint private NFTcount;
-    address public owner;
+    // Fee for minting a collection.
+    uint public mintingFee;
 
     // NFTidCollection -> URIs array. (It will contain STL file & 3D details choosen by the user).
     mapping(uint => string) private UriToPrint;
@@ -60,7 +61,8 @@ contract NFT3D is ERC1155 {
      * @param _amount: Total amount of NFTs we want to mint. (Same NFT Collection)
      * @param _uri: Uri we want to set as the default URI when burned.
      */
-    function mintNFT(uint _amount, string memory _uri) public returns(bool){
+    function mintNFT(uint _amount, string memory _uri) public payable returns(bool){
+        require(msg.value >= mintingFee, "You need to pay Minting Fee");
         _mint(msg.sender, NFTcount, _amount, "");
         NFTsMinted[NFTcount] = _amount;
         NFTsRemainingBurn[NFTcount] = _amount;
@@ -104,13 +106,18 @@ contract NFT3D is ERC1155 {
     }
 
     /**
-     * @dev 
-     * @param   
+     * @dev Setter for the Minting fee the creator needs to pay per collection
+     * @param _newMintingFee: New Fee to set.
      */
+    function updateMintFee(uint _newMintingFee) public onlyOwner returns(bool){
+        mintingFee = _newMintingFee;
+        return true;
+    }
 
 }
     // THINGS TO ADD: 
-    // DOES IT NEED INTERFACE TO INTERACT WITH THE CONTRACT??
+    // DOES IT NEED INTERFACE TO INTERACT WITH THE CONTRACT???
+    // PAY A FEE IF PER COLLECTION OR PER AMOUNT NFTs CREATED FOR THE COLLECTION???
 
     /**
      * @dev 
