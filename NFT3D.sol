@@ -150,7 +150,6 @@ contract NFT3D is IERC1155, ERC1155{
         emit OwnershipTransferred(oldOwner, newOwner);
         return true;
     }
-
 }
     // THINGS TO ADD: 
     
