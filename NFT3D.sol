@@ -157,3 +157,9 @@ contract NFT3D is IERC1155, ERC1155{
     //    from other DApp and choose the printing fee as 0. It will burn the token anyway, 
     //    but the printing company won´t print it as he did not pay enough for it. 
     //    We can add a minimum for the printing fee (Upgradable by owner), so in the worst case the NFT3D will be printed as the smallest size. 
+
+
+    // Add to print function fee for the creator. (10%) + Print Store (90%). 
+    
+    // Añadir a la funcion a print que cuando se haga print añada a la tienda elegida a una array que pueda ver el NFTId de X coleccion. 
+    // Crear otra funcion para que si eres la tienda que fue seleccionada para hacer print de la coleccion X retorne True;
