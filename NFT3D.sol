@@ -13,7 +13,7 @@ interface INFT3D{
 
 contract NanoStore is IERC1155, ERC1155{
 
-    address public owner;
+    address public nanoStore;
     // 1st NFT collection will be number 0 by default.
     uint private nFTcount;
     // Fee for minting a collection.
@@ -21,8 +21,6 @@ contract NanoStore is IERC1155, ERC1155{
     // Array with all the creators. It would be userful for Airdrops.
     address[] private creators;
 
-    // NFTidCollection -> URIs array. (It will contain STL file & 3D details choosen by the user).
-    mapping(uint => string) private uriToPrint;
     // NFTidCollection -> Creator
     mapping(uint => address) public checkCreator;
     // NFTidCollection -> NFTAmount (It will return the amount of NFTs created for a Colection) Example. 1 Shoes model, 10 available.
@@ -37,9 +35,11 @@ contract NanoStore is IERC1155, ERC1155{
     mapping(address => mapping(uint => bool)) private storeSelected;
     // 3DPrintStore => If the address is a real Store;
     mapping(address => bool) public isStore3D;
+    // NFT ID => NFT URI
+    mapping(uint => string) public nftURI;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event URI3DBurned(address indexed owner, uint nFTCollection, string uRI, uint size, string material, address printStore, uint burningTime);
+    event NFT3DBurned(address indexed owner, uint nFTCollection, uint size, string material, address printStore, uint burningTime);
     event NFTMinted(address indexed owner, uint nFTCollection, uint numberCollectionsCreator, uint amount, uint mintingTime);
     event URIUpdated(uint nFTCollection, string newURI, uint updateTime);
     event MintingFeeUpdated(uint newMintingFee, uint updateTime); 
@@ -50,12 +50,12 @@ contract NanoStore is IERC1155, ERC1155{
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(owner == msg.sender, "You`r not the owner");
+        require(nanoStore == msg.sender, "You`r not the owner");
         _;
     }
 
-    constructor() ERC1155(""){
-        owner = msg.sender;
+    constructor() ERC1155("https://cristianricharte6test.infura-ipfs.io/ipfs/"){
+        nanoStore = msg.sender;
     }
 
     /**
@@ -63,13 +63,12 @@ contract NanoStore is IERC1155, ERC1155{
      * @param _amount: Total amount of NFTs we want to mint. (Same NFT Collection)
      * @param _uri: Uri we want to set as the default URI when burned.
      */
-    function mintNFT(uint _amount, string memory _uri) external payable returns(bool){
+    function mintNFT(uint _amount, bytes memory _uri) external payable returns(bool){
         require(msg.value >= mintingFee, "You need to pay Minting Fee");
-        _mint(msg.sender, nFTcount, _amount, "");
+        _mint(msg.sender, nFTcount, _amount, _uri);
         nFTsMinted[nFTcount] = _amount;
         nFTsRemainingBurn[nFTcount] = _amount;
         checkCreator[nFTcount] = msg.sender;
-        uriToPrint[nFTcount] = _uri;
         collectionsPerAddres[msg.sender].push(nFTcount);
 
         for(uint i; i < creators.length; i++) {
@@ -104,10 +103,9 @@ contract NanoStore is IERC1155, ERC1155{
         payable(checkCreator[_nFTCollection]).transfer((_printingFee / 100)*10); // 10% for creator.
         payable(_printStore).transfer((_printingFee / 100)*90); // 90% for PrintStore.
         _burn(msg.sender, _nFTCollection, _amount);
-        string memory _uri = uriToPrint[_nFTCollection];
         storeSelected[_printStore][_nFTCollection] = true;
 
-        emit URI3DBurned(msg.sender, _nFTCollection, _uri, _size, _material, _printStore, block.timestamp);
+        emit NFT3DBurned(msg.sender, _nFTCollection, _size, _material, _printStore, block.timestamp);
         return true;
     }
 
@@ -137,11 +135,11 @@ contract NanoStore is IERC1155, ERC1155{
      * @param _newURI: New URI we want to update for the NFT Collection ID.
      */
     function updateURI(uint _nFTCollection, string memory _newURI) external returns(bool) {
-        require(msg.sender == owner || checkCreator[_nFTCollection] == msg.sender, "You can`t update URI");
+        require(msg.sender == nanoStore || checkCreator[_nFTCollection] == msg.sender, "You can`t update URI");
         require(!changeURIRequest[_nFTCollection][_newURI][msg.sender], "You already approved");
         changeURIRequest[_nFTCollection][_newURI][msg.sender] = true;
-        if(changeURIRequest[_nFTCollection][_newURI][owner] && changeURIRequest[_nFTCollection][_newURI][checkCreator[_nFTCollection]]) {
-            uriToPrint[_nFTCollection] = _newURI;
+        if(changeURIRequest[_nFTCollection][_newURI][nanoStore] && changeURIRequest[_nFTCollection][_newURI][checkCreator[_nFTCollection]]) {
+            nftURI[_nFTCollection] = _newURI; 
         }
 
         emit URIUpdated(_nFTCollection, _newURI, block.timestamp);
@@ -165,8 +163,8 @@ contract NanoStore is IERC1155, ERC1155{
      */
     function transferOwnership(address payable newOwner) external onlyOwner returns(bool){
         require(newOwner != address(0), "New owner is the zero address");
-        address oldOwner = owner;
-        owner = newOwner;
+        address oldOwner = nanoStore;
+        nanoStore = newOwner;
         emit OwnershipTransferred(oldOwner, newOwner);
         return true;
     }
@@ -180,25 +178,45 @@ contract NanoStore is IERC1155, ERC1155{
         return true;
     }
 
-    // Example of encrypt in solidity. The input is stored in the blockchain
-    function encryptURI(string memory uri) public pure returns (bytes32){
-        bytes32 uriEncrypted = keccak256(abi.encodePacked(uri));
-        return uriEncrypted;
+    /**
+     * @dev Getter for the URI, following Opensea standars.
+     * @param _nFTCollection: NFT Collection Identifier.
+     */
+    function uri(uint256 _nFTCollection) override public view returns (string memory) {
+        return(nftURI[_nFTCollection]);
     }
 }
 
 /* Options:
-    1. Encrypt in Solidity: The input is stored in the blockchain. (NOT A SOLUTION)
+    1. Encrypt in Solidity (NOT A SOLUTION): 
+        - The input is stored in the Block Chain.
 
-    2. URI Stored in NanoStore DataBase: 
-        - The URI is encrypted with a key and stored in our DataBase. 
+        // Example of encrypt in solidity. The input is stored in the blockchain
+        function encryptURI(string memory uri) public pure returns (bytes32){
+            bytes32 uriEncrypted = keccak256(abi.encodePacked(uri));
+            return uriEncrypted;
+        }
+
+    2. URI Stored in NanoStore DataBase (PREFFERED): 
+        - The URI is stored in our Data Base. 
         - The 3DStore needs to connect his wallet to our WebSite.
         - The Website will confirm if the address has permissions 
         to check the URI of a Specific NFTCollection through the Smart contract. If so, returns true.
         - The Website shows the URI to the 3DStore address.
 
-    3. Encrypted with Asymetric Keys in the BackEnd: 
-        - The URI is encrypted with the public key of the 3Dstore choosen. 
+    3. Encrypted with Asymmetric Keys in the BackEnd: 
+        - The URI is encrypted with the public key of the 3Dstore chosen. 
         - The encrypted URI is added as a parameter for emitting the event.
-        - Only the choosen 3Dstore can deEncrypt the message (URI) with his private key.
+        - Only the chosen 3Dstore can deencrypt the message (URI) with his private key.
+
+    //////////////////////////////////////Base URI + PATH/////////////////////////////
+
+    - Example of the URI stored in the Blockchain. The NFT Collection points to this: 
+    "https://cristianricharte6test.infura-ipfs.io/ipfs/" + "QmPahtre1STYWgkvq34mVCQR3X4UGDbDyxEfypqzRd5wLK"
+    https://cristianricharte6test.infura-ipfs.io/ipfs/QmPahtre1STYWgkvq34mVCQR3X4UGDbDyxEfypqzRd5wLK
+
+    - Example of the URI for the STL (Should be encrypted and only accessed if conditions are met)
+    "https://cristianricharte6test.infura-ipfs.io/ipfs/" + QmWVxr1iLc2yWX9aAvjoQKRFkNwEqU3zQKuR52sWvGiiZo
+    https://cristianricharte6test.infura-ipfs.io/ipfs/QmWVxr1iLc2yWX9aAvjoQKRFkNwEqU3zQKuR52sWvGiiZo
+    
 */ 
