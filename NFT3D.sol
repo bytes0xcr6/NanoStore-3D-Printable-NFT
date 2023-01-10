@@ -180,8 +180,25 @@ contract NanoStore is IERC1155, ERC1155{
         return true;
     }
 
+    // Example of encrypt in solidity. The input is stored in the blockchain
     function encryptURI(string memory uri) public pure returns (bytes32){
         bytes32 uriEncrypted = keccak256(abi.encodePacked(uri));
         return uriEncrypted;
     }
 }
+
+/* Options:
+    1. Encrypt in Solidity: The input is stored in the blockchain. (NOT A SOLUTION)
+
+    2. URI Stored in NanoStore DataBase: 
+        - The URI is encrypted with a key and stored in our DataBase. 
+        - The 3DStore needs to connect his wallet to our WebSite.
+        - The Website will confirm if the address has permissions 
+        to check the URI of a Specific NFTCollection through the Smart contract. If so, returns true.
+        - The Website shows the URI to the 3DStore address.
+
+    3. Encrypted with Asymetric Keys in the BackEnd: 
+        - The URI is encrypted with the public key of the 3Dstore choosen. 
+        - The encrypted URI is added as a parameter for emitting the event.
+        - Only the choosen 3Dstore can deEncrypt the message (URI) with his private key.
+*/ 
