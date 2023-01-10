@@ -6,14 +6,14 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
 interface INFT3D{
-    function printNFT(uint _nFTCollection, uint _amount, uint _size, uint _printingFee, string memory _material, address _store) external returns(bool);
+    function printNFT(uint _nFTCollection, uint _amount, uint _size, uint _printingFee, string memory _material, address _printStore) external returns(bool);
     function mintNFT(uint _amount, string memory _uri) external payable returns(bool);
     function updateURI(uint _nfTCollection, string memory _newURI) external returns(bool);
 }
 
-contract NFT3D is IERC1155, ERC1155{
+contract NanoStore is IERC1155, ERC1155{
 
-    address private owner;
+    address public owner;
     // 1st NFT collection will be number 0 by default.
     uint private nFTcount;
     // Fee for minting a collection.
@@ -33,9 +33,13 @@ contract NFT3D is IERC1155, ERC1155{
     mapping(uint => mapping(string => mapping(address => bool))) private changeURIRequest;
     // Creator address => array of his NFT Collections ID.
     mapping(address => uint[]) public collectionsPerAddres;
+    // 3DPrintStore => NFTidCollection => If the Store was selected to print that NFTCollection
+    mapping(address => mapping(uint => bool)) private storeSelected;
+    // 3DPrintStore => If the address is a real Store;
+    mapping(address => bool) public isStore3D;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event URI3DBurned(address indexed owner, uint nFTCollection, string uRI, uint size, string material, address store, uint burningTime);
+    event URI3DBurned(address indexed owner, uint nFTCollection, string uRI, uint size, string material, address printStore, uint burningTime);
     event NFTMinted(address indexed owner, uint nFTCollection, uint numberCollectionsCreator, uint amount, uint mintingTime);
     event URIUpdated(uint nFTCollection, string newURI, uint updateTime);
     event MintingFeeUpdated(uint newMintingFee, uint updateTime); 
@@ -50,7 +54,9 @@ contract NFT3D is IERC1155, ERC1155{
         _;
     }
 
-    constructor() ERC1155(""){}
+    constructor() ERC1155(""){
+        owner = msg.sender;
+    }
 
     /**
      * @dev Minting function. It will set the URI, NFT Collection & amount of NFTs created.
@@ -81,25 +87,39 @@ contract NFT3D is IERC1155, ERC1155{
     }
 
     /**
-     * @dev Burning function to burn the token, pays the fee for the burining & emits the URI to print.
-     *      If we choose more than 1 NFT, it will print all of them under the same conditions.
+     * @dev Burning function to burn the token, pays the fee for the burining to the PrintStore3D & Creator.
+     *      Also, it emits the URI to print. If we choose more than 1 NFT, it will print all of them under the same conditions.
+            The print store 3D will have access to the password for this NFTCollection, after the function is compleated.
      * @param _nFTCollection: NFT Collection Identifier.
      * @param _amount: Total amount of NFTs we want to print. (Same NFT Collection)
      * @param _size: Desirable size for the NFT printed.
-     * @param _printingFee: Printing Fee stablished by the Grams & Material.
+     * @param _printingFee: Printing Fee stablished by the Grams & Material + Creator fee.
      * @param _material: Desirable material for the NFT printed.
-     * @param _store: Print store where we want to print the NFT.
+     * @param _printStore: Print store where we want to print the NFT.
      */
-    function printNFT(uint _nFTCollection, uint _amount, uint _size, uint _printingFee, string memory _material, address _store) external payable returns(bool){
+    function printNFT(uint _nFTCollection, uint _amount, uint _size, uint _printingFee, string memory _material, address _printStore) external payable returns(bool){
         require(msg.value == _printingFee, "Pay printingFee");
+        require(isStore3D[_printStore], "Choose another 3DPrintStore");
         nFTsRemainingBurn[_nFTCollection] -= _amount;
-        payable(_store).transfer(_printingFee);
+        payable(checkCreator[_nFTCollection]).transfer((_printingFee / 100)*10); // 10% for creator.
+        payable(_printStore).transfer((_printingFee / 100)*90); // 90% for PrintStore.
         _burn(msg.sender, _nFTCollection, _amount);
         string memory _uri = uriToPrint[_nFTCollection];
+        storeSelected[_printStore][_nFTCollection] = true;
 
-        emit URI3DBurned(msg.sender, _nFTCollection, _uri, _size, _material, _store, block.timestamp);
+        emit URI3DBurned(msg.sender, _nFTCollection, _uri, _size, _material, _printStore, block.timestamp);
         return true;
     }
+
+    /**
+     * @dev Toggle function to set Store 3D elegible to print or revoke elegibility to each address.
+     * @param _printStore: PrintStore3D address.
+     */
+    function store3DElegible(address _printStore) public onlyOwner returns(bool){
+        isStore3D[_printStore] =! isStore3D[_printStore];
+        return(true);
+    }
+
 
     /**
      * @dev Withdrawn function to extract from the contract the Fees paid for minting 3D NFts.
@@ -150,16 +170,18 @@ contract NFT3D is IERC1155, ERC1155{
         emit OwnershipTransferred(oldOwner, newOwner);
         return true;
     }
+
+    /**
+     * @dev Getter to check if the msg.sender has permissions to see the password to encrypt the URI.
+     * @param _nFTCollection: NFT Collection Identifier.
+     */
+    function checkStorePermission(uint _nFTCollection) public view returns(bool){
+        require(storeSelected[msg.sender][_nFTCollection], "You are not elegible to print this NFTID");
+        return true;
+    }
+
+    function encryptURI(string memory uri) public pure returns (bytes32){
+        bytes32 uriEncrypted = keccak256(abi.encodePacked(uri));
+        return uriEncrypted;
+    }
 }
-    // THINGS TO ADD: 
-  
-    // - When the user burns the NFT, he must pay a printing fee, but the function can be called by the NFT owner 
-    //    from other DApp and choose the printing fee as 0. It will burn the token anyway, 
-    //    but the printing company won´t print it as he did not pay enough for it. 
-    //    We can add a minimum for the printing fee (Upgradable by owner), so in the worst case the NFT3D will be printed as the smallest size. 
-
-
-    // Add to print function fee for the creator. (10%) + Print Store (90%). 
-    
-    // Añadir a la funcion a print que cuando se haga print añada a la tienda elegida a una array que pueda ver el NFTId de X coleccion. 
-    // Crear otra funcion para que si eres la tienda que fue seleccionada para hacer print de la coleccion X retorne True;
