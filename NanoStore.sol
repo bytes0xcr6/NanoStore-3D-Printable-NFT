@@ -39,7 +39,7 @@ contract NanoStore is IERC1155, ERC1155{
     mapping(uint => string) public nftURI;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event NFT3DBurned(address indexed owner, uint nFTCollection, uint size, string material, address printStore, uint burningTime);
+    event NFT3DBurned(address indexed owner, uint nFTCollection, uint size, address printStore, uint burningTime);
     event NFTMinted(address indexed owner, uint nFTCollection, uint numberCollectionsCreator, uint amount, uint mintingTime);
     event URIUpdated(uint nFTCollection, string newURI, uint updateTime);
     event MintingFeeUpdated(uint newMintingFee, uint updateTime); 
@@ -224,4 +224,6 @@ contract NanoStore is IERC1155, ERC1155{
     - When burning -> 10% for the creator & 90% for the printStore
     - Adjusted the contract to the option 2. Now The Store3D needs to sign with his wallet in NanoStore Website to have access to the URI containing the STL.
     
+    - Add peso total al contrato
+    - Add peso, Material principal y %, Material secundario y %, Material tercero y % a la Metadata.
 */ 
