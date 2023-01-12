@@ -6,6 +6,26 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155URIStorage.sol";
 
+/*     URI Stored in NanoStore DataBase (PREFFERED): 
+        - Artist uploads img and info to create metadata. A script creates the JSON file &  uploads to IPFS & this URI is added when minting NFT Collection.
+        - Artist uploads STL pointing to his NFT Collection. A script uploads it to IPFS.
+        - The STL URI is stored in our Data Base. (NFT Collection ID -> STL URI).
+        - Then the NFT is burned/sent to print. An Event will be emitted and the 3DStore will be aware of it.
+        - The 3DStore needs to connect his wallet to our WebSite.
+        - The Smart contract will confirm if the 3DStore has permissions to see the URI.
+        - The Website shows the URI to the 3DStore address.
+
+    //////////////////////////////////////Base URI + PATH/////////////////////////////
+
+    - Example of the URI stored in the Blockchain. The NFT Collection points to this: 
+    "https://cristianricharte6test.infura-ipfs.io/ipfs/" + "QmPahtre1STYWgkvq34mVCQR3X4UGDbDyxEfypqzRd5wLK"
+    https://cristianricharte6test.infura-ipfs.io/ipfs/QmPahtre1STYWgkvq34mVCQR3X4UGDbDyxEfypqzRd5wLK
+
+    - Example of the URI for the STL (Should be encrypted and only accessed if conditions are met)
+    "https://cristianricharte6test.infura-ipfs.io/ipfs/" + QmWVxr1iLc2yWX9aAvjoQKRFkNwEqU3zQKuR52sWvGiiZo
+    https://cristianricharte6test.infura-ipfs.io/ipfs/QmWVxr1iLc2yWX9aAvjoQKRFkNwEqU3zQKuR52sWvGiiZo
+*/
+
 interface INFT3D{
     function printNFT(uint _nFTCollection, uint _amount, uint _size, uint _printingFee, address _printStore) external returns(bool);
     function mintNFT(uint _amount, string memory _uri) external payable returns(bool);
@@ -120,7 +140,6 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
         return(true);
     }
 
-
     /**
      * @dev Withdrawn function to extract from the contract the Fees paid for minting 3D NFts.
      * @param _amount: Amount in Ethers choosen to withdrawn.
@@ -209,33 +228,4 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
     function uri(uint256 _nFTCollection) public view override(ERC1155, ERC1155URIStorage) returns (string memory) {
         return ERC1155URIStorage.uri(_nFTCollection);
     }
-
 }
-
-/* Options:
-
-    2. URI Stored in NanoStore DataBase (PREFFERED): 
-        - Artist uploads img and info to create metadata. A script creates the JSON file &  uploads to IPFS & this URI is added when minting NFT Collection.
-        - Artist uploads STL pointing to his NFT Collection. A script uploads it to IPFS.
-        - The STL URI is stored in our Data Base. (NFT Collection ID -> STL URI).
-        - Then the NFT is burned/sent to print. An Event will be emitted and the 3DStore will be aware of it.
-        - The 3DStore needs to connect his wallet to our WebSite.
-        - The Smart contract will confirm if the 3DStore has permissions to see the URI.
-        - The Website shows the URI to the 3DStore address.
-
-    //////////////////////////////////////Base URI + PATH/////////////////////////////
-
-    - Example of the URI stored in the Blockchain. The NFT Collection points to this: 
-    "https://cristianricharte6test.infura-ipfs.io/ipfs/" + "QmPahtre1STYWgkvq34mVCQR3X4UGDbDyxEfypqzRd5wLK"
-    https://cristianricharte6test.infura-ipfs.io/ipfs/QmPahtre1STYWgkvq34mVCQR3X4UGDbDyxEfypqzRd5wLK
-
-    - Example of the URI for the STL (Should be encrypted and only accessed if conditions are met)
-    "https://cristianricharte6test.infura-ipfs.io/ipfs/" + QmWVxr1iLc2yWX9aAvjoQKRFkNwEqU3zQKuR52sWvGiiZo
-    https://cristianricharte6test.infura-ipfs.io/ipfs/QmWVxr1iLc2yWX9aAvjoQKRFkNwEqU3zQKuR52sWvGiiZo
-    
-    Things added:
-    - When burning -> 10% for the creator & 90% for the printStore
-    - Adjusted the contract to the option 2. Now The Store3D needs to sign with his wallet in NanoStore Website to have access to the URI containing the STL.
-    - Add peso total al contrato
-    - Add peso, Material principal y %, Material secundario y %, Material tercero y % a la Metadata.
-*/ 
