@@ -4,17 +4,13 @@
   "image": "https://cristianricharte6test.infura-ipfs.io/ipfs/QmZUw9vTPar5hA5a21QiWG57mj4E1K71djkFPcuja7wKGs",
   "attributes": [
     { "trait_type": "Brand", "value": "Nike" },
-    { "trait_type": "Weight / Grams Scale 1", "value": "30" },
-    { "trait_type": "Principal 3D Material", "value": "PETG" },
-    { "trait_type": "Secondary 3D Material", "value": "XXX" },
-    { "trait_type": "Tertiary 3D Material", "value": "YYY" }
+    { "trait_type": "Scale", "value": "1" },
+    { "trait_type": "Total Grams", "value": "30" },
+    { "trait_type": "Material PETG", "value": "50%" },
+    { "trait_type": "Material XXXX", "value": "30%" },
+    { "trait_type": "Material XXXX", "value": "20%" },
+    { "trait_type": "boundingBox Heigh", "value": "30" },
+    { "trait_type": "boundingBox Length", "value": "40" },
+    { "trait_type": "boundingBox Width", "value": "30" }
   ]
 }
-
-// DEPLOY CONTRACT WITH BASE URI:
-
-// WHEN MINTING NFT COLLECTION:
-// Create a script to deploy to IPFS img, add img & Metadata details to the JSON file and deploy to IPFS JSON file.
-// Also, deploy to IPFS the STL and store IPFS in our Data Base.
-
-// CHECK IN OPENSEA HOW IT LOOKS
