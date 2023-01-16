@@ -30,6 +30,7 @@ interface INFT3D{
     function printNFT(uint _nFTCollection, uint _amount, uint _size, uint _printingFee, address _printStore) external returns(bool);
     function mintNFT(uint _amount, string memory _uri) external payable returns(bool);
     function updateURI(uint _nfTCollection, string memory _newURI) external returns(bool);
+    function checkStorePermission(uint _nFTCollection) external view returns(bool);
 }
 
 contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
@@ -75,7 +76,7 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
         _;
     }
 
-    constructor() ERC1155("https://cristianricharte6test.infura-ipfs.io/ipfs/"){
+    constructor(string memory _baseURI) ERC1155(_baseURI){
         nanoStore = msg.sender;
     }
 
