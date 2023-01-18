@@ -35,13 +35,12 @@ interface INFT3D{
 
 contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
 
+    // Owner Address
     address public nanoStore;
-    // 1st NFT collection will be number 0 by default.
+    // 1st NFT collection will be number 1 by default.
     uint private nFTcount;
     // Fee for minting a collection.
     uint public mintingFee;
-    // Array with all the creators. It would be userful for Airdrops.
-    address[] private creators;
 
     // NFTidCollection -> Creator
     mapping(uint => address) public checkCreator;
@@ -52,13 +51,11 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
     // NFTidCollection -> Request URI -> owner or creator -> Accepted.
     mapping(uint => mapping(string => mapping(address => bool))) private changeURIRequest;
     // Creator address => array of his NFT Collections ID.
-    mapping(address => uint[]) public collectionsPerAddres;
+    mapping(address => uint[]) public collectionsPerAddress;
     // 3DPrintStore => NFTidCollection => If the Store was selected to print that NFTCollection
     mapping(address => mapping(uint => bool)) private storeSelected;
     // 3DPrintStore => If the address is a real Store
     mapping(address => bool) public isStore3D;
-    // NFTidCollection => Weight 3D printed in scale 1
-    mapping(uint => uint) public weightNFT3D;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event NFT3DBurned(address indexed owner, uint nFTCollection, uint size, address printStore, uint burningTime);
@@ -77,35 +74,28 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
     }
 
     constructor(string memory _baseURI) ERC1155(_baseURI){
+        _setBaseURI(_baseURI);
         nanoStore = msg.sender;
     }
 
     /**
      * @dev Minting function. It will set the URI, NFT Collection & amount of NFTs created.
      * @param _amount: Total amount of NFTs we want to mint. (Same NFT Collection)
-     * @param _weight: Weight for the 3D NFT printed in scale 1.
      * @param _uri: Uri we want to set as the default TOKEN URI when burned.
      */
-    function mintNFT(uint _amount, uint _weight, string memory _uri) external payable returns(bool){
-        require(msg.value >= mintingFee, "You need to pay Minting Fee");
+    function mintNFT(uint _amount, string memory _uri) external payable returns(bool){
+        require(msg.value >= mintingFee, "You need to pay Minting Fee");    
+        require(bytes(_uri).length > 0, "Add a Token URI");
+        payable(address(this)).transfer(msg.value);
+        nFTcount++;
         _mint(msg.sender, nFTcount, _amount, "");
         nFTsMinted[nFTcount] = _amount;
         nFTsRemainingBurn[nFTcount] = _amount;
         checkCreator[nFTcount] = msg.sender;
-        collectionsPerAddres[msg.sender].push(nFTcount);
+        collectionsPerAddress[msg.sender].push(nFTcount);
         _setURI(nFTcount, _uri);
-        weightNFT3D[nFTcount] = _weight;
-
-        for(uint i; i < creators.length; i++) {
-            if(creators[i] != msg.sender) {  
-                creators.push(msg.sender);
-                emit NewCreator(msg.sender, block.timestamp);
-            }
-        }
         
-        emit NFTMinted(msg.sender, nFTcount, collectionsPerAddres[msg.sender].length, _amount, block.timestamp);
-        nFTcount++;
-
+        emit NFTMinted(msg.sender, nFTcount, collectionsPerAddress[msg.sender].length, _amount, block.timestamp);
         return true;
     }
 
@@ -122,10 +112,11 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
     function printNFT(uint _nFTCollection, uint _amount, uint _size, uint _printingFee, address _printStore) external payable returns(bool){
         require(msg.value == _printingFee, "Pay printingFee");
         require(isStore3D[_printStore], "Choose another 3DPrintStore");
+        require(_nFTCollection != 0 && nFTcount >= _nFTCollection, "Wrong NFT Collection");
+        _burn(msg.sender, _nFTCollection, _amount);
         nFTsRemainingBurn[_nFTCollection] -= _amount;
         payable(checkCreator[_nFTCollection]).transfer((_printingFee / 100)*10); // 10% for creator.
         payable(_printStore).transfer((_printingFee / 100)*90); // 90% for PrintStore.
-        _burn(msg.sender, _nFTCollection, _amount);
         storeSelected[_printStore][_nFTCollection] = true;
 
         emit NFT3DBurned(msg.sender, _nFTCollection, _size, _printStore, block.timestamp);
@@ -138,7 +129,7 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
      */
     function store3DElegible(address _printStore) public onlyOwner returns(bool){
         isStore3D[_printStore] =! isStore3D[_printStore];
-        return(true);
+        return true;
     }
 
     /**
@@ -147,6 +138,7 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
      * @param _to: Who the funds will be transfer to.
      */
     function withdrawnFunds(uint _amount, address _to) public onlyOwner returns(bool) {
+        require(_to != address(0), "Address cannot be 0");
         payable(_to).transfer(_amount);
         emit FoundsWithdrawn(msg.sender, _amount, block.timestamp);
         return true;
@@ -227,6 +219,10 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
      *   uri value set, then the result is empty.
      */   
     function uri(uint256 _nFTCollection) public view override(ERC1155, ERC1155URIStorage) returns (string memory) {
+        require(_nFTCollection != 0 && nFTcount >= _nFTCollection, "Wrong NFT Collection");
         return ERC1155URIStorage.uri(_nFTCollection);
     }
+
+    // Receive function to receive funds in the contract.
+    receive() external payable {}
 }
