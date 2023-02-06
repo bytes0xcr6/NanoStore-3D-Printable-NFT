@@ -7,7 +7,6 @@
 const hre = require("hardhat");
 
 async function main() {
-  const signers = await hre.ethers.getSigners();
   const NanoStore = await hre.ethers.getContractFactory("NanoStore");
   const nanoStore = await NanoStore.deploy("https://BaseURI/");
   nanoStore.deployed();
@@ -15,8 +14,6 @@ async function main() {
   console.log(
     `\n - NanoStore contract deployed successfully to: ${nanoStore.address}`
   );
-  console.log(`- NanoStore owner is: ${signers[0].address}`);
-  console.log("\n---------------------------------------");
 }
 
 // We recommend this pattern to be able to use async/await everywhere

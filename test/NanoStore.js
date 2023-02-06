@@ -11,9 +11,10 @@ describe("NanoStore", function () {
     const signers = await ethers.getSigners();
     const NanoStore = await ethers.getContractFactory("NanoStore");
     const nanoStore = await NanoStore.deploy("https://BaseURI/");
+    const creatorFeeForPrinting = "2000000000000000000";
     await nanoStore.deployed();
 
-    return { nanoStore, signers };
+    return { nanoStore, signers, creatorFeeForPrinting };
   }
 
   describe("Deployment", async function () {
@@ -44,7 +45,7 @@ describe("NanoStore", function () {
       console.log("🛑 Reverted if called from not Owner");
     });
 
-    it("Update minting Fee", async function () {
+    it("Update minting Fee for NanoStore", async function () {
       const { nanoStore, signers } = await loadFixture(deployment);
 
       const weiValue = "20000000000000000"; // Equal to 0.02 Ethers
@@ -63,8 +64,27 @@ describe("NanoStore", function () {
       console.log("---------------------------------------");
     });
 
-    it("Send minting fee, mint NFT Collection & Withdraw Fees stored in the contract", async function () {
+    it("Update Burning Fee for NanoStore", async () => {
       const { nanoStore, signers } = await loadFixture(deployment);
+
+      const burningFee = "10000000000000000";
+
+      await nanoStore.updateBurningFee(burningFee);
+
+      expect(await nanoStore.burningFee()).to.equal(burningFee);
+
+      console.log(`\n✅ Burning Fee updated to: ${burningFee} Weis`);
+
+      await expect(nanoStore.connect(signers[2]).updateBurningFee(burningFee))
+        .to.be.reverted;
+      console.log("🛑 Reverted if called from not Owner");
+      console.log("---------------------------------------");
+    });
+
+    it("Send minting fee, mint NFT Collection & Withdraw Fees stored in the contract", async function () {
+      const { nanoStore, signers, creatorFeeForPrinting } = await loadFixture(
+        deployment
+      );
       const weiValue = "20000000000000000"; // Equal to 0.02 Ethers
       const valueEthers = ethers.utils.formatEther(weiValue);
 
@@ -74,14 +94,19 @@ describe("NanoStore", function () {
       console.log("`\n✅ Minting fee updated");
 
       // Mint NFTs & pay fee
-      await nanoStore.mintNFT("10", "<CollectionURITest1>", {
-        value: weiValue,
-      });
+      await nanoStore.mintNFT(
+        "10",
+        "<CollectionURITest1>",
+        creatorFeeForPrinting,
+        {
+          value: weiValue,
+        }
+      );
       console.log("✅ 10 NFTs has been minted & minting fee paid");
 
       // revert if not paid enough MintFee
       await expect(
-        nanoStore.mintNFT("10", "Collection fail", {
+        nanoStore.mintNFT("10", "Collection fail", creatorFeeForPrinting, {
           value: "10000000000000000",
         })
       ).to.be.reverted;
@@ -112,8 +137,12 @@ describe("NanoStore", function () {
       console.log(
         `\nFees transferred from NanoStore contract to Owner's address`
       );
-      console.log(`- Balance before transfer: ${balanceOwnerBeforeTransfer}`);
-      console.log(`- Balance after transfer:  ${balanceOwnerAfterTransfer}`);
+      console.log(
+        `- Owner balance before transfer: ${balanceOwnerBeforeTransfer}`
+      );
+      console.log(
+        `- Owner balance after transfer:  ${balanceOwnerAfterTransfer}`
+      );
       console.log(
         `The Owner now has extra ${
           balanceOwnerAfterTransfer - balanceOwnerBeforeTransfer
@@ -127,13 +156,18 @@ describe("NanoStore", function () {
       const { nanoStore, signers } = await loadFixture(deployment);
 
       await expect(
-        nanoStore.connect(signers[2]).store3DElegible(signers[1].address)
+        nanoStore
+          .connect(signers[2])
+          .store3DElegible([signers[1].address, signers[2].address], true)
       ).to.be.reverted;
 
-      await nanoStore.store3DElegible(signers[1].address);
+      await nanoStore.store3DElegible(
+        [signers[1].address, signers[2].address],
+        true
+      );
       expect(await nanoStore.isStore3D(signers[1].address)).to.be.true;
       console.log(
-        `\n✅ ${signers[1].address}has been set as elegible 3D Store`
+        `\n✅ ${signers[1].address} & ${signers[2].address}has been set as elegible 3D Store`
       );
       console.log("🛑 Reverted if called from not Owner");
       console.log("---------------------------------------");
@@ -142,7 +176,9 @@ describe("NanoStore", function () {
     it("Update Base URI, check Base URI + Token URI & Mint NFT", async () => {
       // function updateBaseURI(string memory _baseURI) public onlyOwner returns(bool){
 
-      const { nanoStore, signers } = await loadFixture(deployment);
+      const { nanoStore, signers, creatorFeeForPrinting } = await loadFixture(
+        deployment
+      );
       const newBaseURI = "https://NewBaseURIUpdated/";
 
       // Update BASE URI
@@ -159,29 +195,31 @@ describe("NanoStore", function () {
       );
 
       // Mint NFTs, Creator is Signer 4
-      await nanoStore.connect(signers[4]).mintNFT(5, "uriToken");
+      await nanoStore
+        .connect(signers[4])
+        .mintNFT(5, "uriToken", creatorFeeForPrinting);
       console.log(`✅ Base URI Updated`);
       console.log(
-        `BASE URI + TOKEN URI of Collection 1 is: ${await nanoStore.uri(1)}`
+        `- BASE URI + TOKEN URI of Collection 1 is: ${await nanoStore.uri(1)}`
       );
 
       // Total supply of NFTs created
-      const NFTSupply = await nanoStore.nFTsMinted(1);
+      const NFT1Details = await nanoStore.CollectionIndex(1);
       console.log(
-        `✅ NFT ID 1 Collection created with a supply of ${NFTSupply} NFTs`
+        `✅ NFT ID 1 Collection created with a supply of ${NFT1Details.nFTsMinted} NFTs`
       );
 
       // Check the NFT Collection is matched with the creator when checking creator
-      expect(await nanoStore.checkCreator(1)).to.equal(signers[4].address);
+      expect(NFT1Details.creator).to.equal(signers[4].address);
       console.log(`✅ NFT ID Collection assigned to creator address`);
 
       // Check the remaining supply to burn has to be equal to total supply minted by creator
-      expect(await nanoStore.nFTsRemainingBurn(1)).to.equal(NFTSupply);
+      expect(NFT1Details.nFTsRemainingBurn).to.equal(NFT1Details.nFTsMinted);
       console.log(`✅ Total supply still remaining to be burned by Owner`);
 
       // Check the creator has the total supply minted
       expect(await nanoStore.balanceOf(signers[4].address, 1)).to.equal(
-        NFTSupply
+        NFT1Details.nFTsMinted
       );
       console.log(`✅ Total supply assigned to creator`);
 
@@ -193,13 +231,23 @@ describe("NanoStore", function () {
     });
 
     it("Mint 4 collections with different creator", async () => {
-      const { nanoStore, signers } = await loadFixture(deployment);
+      const { nanoStore, signers, creatorFeeForPrinting } = await loadFixture(
+        deployment
+      );
 
       // Mint 3 NFTs collections
-      await nanoStore.connect(signers[1]).mintNFT(5, "uriToken1");
-      await nanoStore.connect(signers[2]).mintNFT(5, "uriToken2");
-      await nanoStore.connect(signers[1]).mintNFT(5, "uriToken3");
-      await nanoStore.connect(signers[1]).mintNFT(5, "uriToken4");
+      await nanoStore
+        .connect(signers[1])
+        .mintNFT(5, "uriToken1", creatorFeeForPrinting);
+      await nanoStore
+        .connect(signers[2])
+        .mintNFT(5, "uriToken2", creatorFeeForPrinting);
+      await nanoStore
+        .connect(signers[1])
+        .mintNFT(5, "uriToken3", creatorFeeForPrinting);
+      await nanoStore
+        .connect(signers[1])
+        .mintNFT(5, "uriToken4", creatorFeeForPrinting);
 
       const collectionsSigner1 = [];
       const collectionsSigner2 = [];
@@ -226,10 +274,14 @@ describe("NanoStore", function () {
     });
 
     it("Create collection & Request to change URI", async () => {
-      const { nanoStore, signers } = await loadFixture(deployment);
+      const { nanoStore, signers, creatorFeeForPrinting } = await loadFixture(
+        deployment
+      );
 
       // Mint NFT collection
-      await nanoStore.connect(signers[1]).mintNFT(5, "uriToken1");
+      await nanoStore
+        .connect(signers[1])
+        .mintNFT(5, "uriToken1", creatorFeeForPrinting);
 
       // Request update Token URI from Creator
       await nanoStore.connect(signers[1]).updateURI(1, "NewUriToken1");
@@ -264,97 +316,15 @@ describe("NanoStore", function () {
       console.log("---------------------------------------");
     });
 
-    it("Whole process: Set 3D print store, Mint NFT Collection, send to a new user & send to print", async () => {
-      const { nanoStore, signers } = await loadFixture(deployment);
-
-      // Set 3D Print Store as elegible (Signers 10)
-      await nanoStore.store3DElegible(signers[10].address);
-      expect(await nanoStore.isStore3D(signers[10].address)).to.be.true;
-      console.log(`\n✅ Signer10 has been set as elegible 3D Store`);
-
-      // Mint many NFT Collections and check how the last one behaves
-      for (let i = 0; i < 10; i++) {
-        await nanoStore.connect(signers[1]).mintNFT(1, "testSginer1");
-      }
-      console.log("\n✅ 10 NFT collections created by Signer1");
-      for (let i = 0; i < 20; i++) {
-        await nanoStore.connect(signers[2]).mintNFT(1, "testSigner2");
-      }
-      console.log("✅ 20 NFT collections created by Signer2");
-
-      await nanoStore.connect(signers[1]).mintNFT(50, "ZapatillasNike");
-      expect(await nanoStore.nFTsMinted(31)).to.equal(50);
-      const NFTsCreated = await nanoStore.nFTsMinted(31);
-      console.log(
-        `✅ Last minting by Signer1 has created an NFT Collection of ${NFTsCreated} NFTs`
-      );
-
-      // Transfer 20 NFTs (Last NFT collection minted ("31") from Signers1 to new Owner
-      await nanoStore
-        .connect(signers[1])
-        .safeTransferFrom(signers[1].address, signers[2].address, 31, 20, "0x");
-      expect(await nanoStore.balanceOf(signers[1].address, 31)).to.equal(30);
-
-      const NFTBalanceAfterTransfer = await nanoStore.balanceOf(
-        signers[2].address,
-        31
-      );
-
-      console.log(
-        `\n✅ Signer1 has transferred ${NFTBalanceAfterTransfer} NFTs of the collection 31 to Signer2`
-      );
-
-      // Print/Burn 10 NFTs in 3D Store from collection 31
-      const ether = "1000000000000000000";
-      await nanoStore
-        .connect(signers[2])
-        .printNFT(31, 10, 1, ether, signers[10].address, { value: ether });
-
-      console.log("\n✅ 10 NFTs burned from the collection 31");
-      const NFTsRemainingToBurn = await nanoStore.nFTsRemainingBurn(31);
-      expect(NFTsRemainingToBurn).to.equal(40);
-      console.log(
-        `- There are ${NFTsRemainingToBurn} remaining to burn from the NFT collection 31 with a total of ${NFTsCreated}`
-      );
-
-      const NFTsTotalSupply = await nanoStore.balanceOf(signers[2].address, 31);
-      expect(NFTsTotalSupply).to.equal(10);
-      console.log(
-        `- After Burning the total balance of NFT Collection 31 assigned to Signer2 is: ${NFTsTotalSupply}`
-      );
-
-      // NFTs minted should be equal as 50
-      const NFTsMintedAfterBurning = await nanoStore.nFTsMinted(31);
-      expect(NFTsCreated).to.equal(NFTsMintedAfterBurning);
-      console.log(
-        `- After Burning the total NFTs minted keeps being: ${NFTsMintedAfterBurning}`
-      );
-
-      // Confirm the signers[10] (3D Store selected) returns true after burning
-      expect(
-        await nanoStore.connect(signers[10]).checkStorePermission(31)
-      ).to.equal(true);
-      console.log(
-        `\n✅ The 3D Store selected for printing NFT collection 31 is true`
-      );
-      await expect(nanoStore.connect(signers[1]).checkStorePermission(31)).to.be
-        .reverted;
-      console.log(
-        `🛑 Reverted if checking from NOT 3D Store selected for printing NFT collection 31`
-      );
-      await expect(nanoStore.connect(signers[1]).checkStorePermission(31)).to.be
-        .reverted;
-      console.log(
-        `🛑 Reverted if checking from selected 3D store for collection 31, for a different NFT Collection`
-      );
-      console.log("---------------------------------------");
-    });
-
     it("Transfer NFTs (same collection)", async () => {
-      const { nanoStore, signers } = await loadFixture(deployment);
+      const { nanoStore, signers, creatorFeeForPrinting } = await loadFixture(
+        deployment
+      );
 
       // Mint 1 NFTs collection
-      await nanoStore.connect(signers[2]).mintNFT(30, "TokenURI1");
+      await nanoStore
+        .connect(signers[2])
+        .mintNFT(30, "TokenURI1", creatorFeeForPrinting);
       console.log(`\n✅ Signer 2 has minted 30 NFTs (Collection ID 1)`);
 
       // Transfer from signer2 (NFT Owner) to signer1 (Caller Signer2)
@@ -400,11 +370,17 @@ describe("NanoStore", function () {
       console.log("---------------------------------------");
     });
     it("Transfer different NFTs collections in once transaction using safeBatchTransferFrom()", async () => {
-      const { nanoStore, signers } = await loadFixture(deployment);
+      const { nanoStore, signers, creatorFeeForPrinting } = await loadFixture(
+        deployment
+      );
 
       // Mint 2 NFTs collection
-      await nanoStore.connect(signers[2]).mintNFT(20, "TokenURI1");
-      await nanoStore.connect(signers[2]).mintNFT(20, "TokenURI2");
+      await nanoStore
+        .connect(signers[2])
+        .mintNFT(20, "TokenURI1", creatorFeeForPrinting);
+      await nanoStore
+        .connect(signers[2])
+        .mintNFT(20, "TokenURI2", creatorFeeForPrinting);
       console.log(
         `\n✅ Signer 2 has minted 20 NFTs (Collection ID 1) & 20 NFTs (Collection ID 2)`
       );
@@ -492,6 +468,129 @@ describe("NanoStore", function () {
         `✅ Signer2 now owns ${balanceSigner2ID1} NFTs(ID 1) & ${balanceSigner2ID2} NFTs(ID 2)`
       );
 
+      console.log("---------------------------------------");
+    });
+
+    it("Whole process: Set 3D print store, Mint NFT Collection, send to a new user & send to print", async () => {
+      const { nanoStore, signers, creatorFeeForPrinting } = await loadFixture(
+        deployment
+      );
+
+      // Set Burning Fee for NanoStore
+      await nanoStore.updateBurningFee("1000000000000000000");
+      const balancePrinterStoreBefore = await ethers.provider.getBalance(
+        signers[10].address
+      );
+
+      // Set 3D Print Store as elegible (Signers 10)
+      await nanoStore.store3DElegible([signers[10].address], true);
+      expect(await nanoStore.isStore3D(signers[10].address)).to.be.true;
+      console.log(`\n✅ Signer10 has been set as elegible 3D Store`);
+
+      // Mint many NFT Collections and check how the last one behaves
+      for (let i = 0; i < 10; i++) {
+        await nanoStore
+          .connect(signers[1])
+          .mintNFT(1, "testSginer1", creatorFeeForPrinting);
+      }
+      console.log("\n✅ 10 NFT collections created by Signer1");
+
+      for (let i = 0; i < 20; i++) {
+        await nanoStore
+          .connect(signers[2])
+          .mintNFT(1, "testSigner2", creatorFeeForPrinting);
+      }
+      console.log("✅ 20 NFT collections created by Signer2");
+
+      await nanoStore
+        .connect(signers[1])
+        .mintNFT(50, "ZapatillasNike", creatorFeeForPrinting);
+
+      const NFT31Details = await nanoStore.CollectionIndex(31);
+
+      expect(NFT31Details.nFTsMinted).to.equal(50);
+      console.log(
+        `✅ Last minting by Signer1 has created an NFT Collection of ${NFT31Details.nFTsMinted} NFTs`
+      );
+
+      // Transfer 20 NFTs (Last NFT collection minted ("31") from Signers1 to new Owner
+      await nanoStore
+        .connect(signers[1])
+        .safeTransferFrom(signers[1].address, signers[2].address, 31, 20, "0x");
+      expect(await nanoStore.balanceOf(signers[1].address, 31)).to.equal(30);
+
+      const NFTBalanceAfterTransfer = await nanoStore.balanceOf(
+        signers[2].address,
+        31
+      );
+
+      console.log(
+        `\n✅ Signer1 has transferred ${NFTBalanceAfterTransfer} NFTs of the collection 31 to Signer2`
+      );
+
+      // Printin price ->
+      // Fee for Creator: 2000000000000000000
+      // Fee for NanoStore: 1000000000000000000
+      // Fee for 3D Printer Store: 1000000000000000000
+      // Total Fee to pay for printing: 4000000000000000000
+      const printingPrice = "4000000000000000000";
+
+      // Print/Burn 10 NFTs in 3D Store from collection 31
+      await nanoStore
+        .connect(signers[2])
+        .printNFT(31, 10, 1, printingPrice, signers[10].address, {
+          value: printingPrice,
+        });
+
+      console.log("\n✅ 10 NFTs burned from the collection 31");
+
+      // Printer 3D Store balance after printing
+      const balancePrinterStoreAfter = await ethers.provider.getBalance(
+        signers[10].address
+      );
+      console.log(
+        `- 3D printer Store balance before printing: ${balancePrinterStoreBefore}`
+      );
+      console.log(
+        `- 3D printer Store balance After printing: ${balancePrinterStoreAfter}`
+      );
+
+      const NFT31DetailsAfterBurn = await nanoStore.CollectionIndex(31);
+
+      expect(NFT31DetailsAfterBurn.nFTsRemainingBurn).to.equal(40);
+      console.log(
+        `- There are ${NFT31DetailsAfterBurn.nFTsRemainingBurn} remaining to burn from the NFT collection 31 with a total of ${NFT31DetailsAfterBurn.nFTsMinted} minted`
+      );
+
+      const NFTsTotalSupply = await nanoStore.balanceOf(signers[2].address, 31);
+      expect(NFTsTotalSupply).to.equal(10);
+      console.log(
+        `- After Burning the total balance of NFT Collection 31 assigned to Signer2 is: ${NFTsTotalSupply}`
+      );
+
+      // NFTs minted should be equal as 50
+      expect(NFT31DetailsAfterBurn.nFTsMinted).to.equal(50);
+      console.log(
+        `- After Burning the total NFTs minted keeps being: ${NFT31DetailsAfterBurn.nFTsMinted}`
+      );
+
+      // Confirm the signers[10] (3D Store selected) returns true after burning
+      expect(
+        await nanoStore.connect(signers[10]).checkStorePermission(31)
+      ).to.equal(true);
+      console.log(
+        `\n✅ The 3D Store selected for printing NFT collection 31 is true`
+      );
+      await expect(nanoStore.connect(signers[1]).checkStorePermission(31)).to.be
+        .reverted;
+      console.log(
+        `🛑 Reverted if checking from NOT 3D Store selected for printing NFT collection 31`
+      );
+      await expect(nanoStore.connect(signers[1]).checkStorePermission(31)).to.be
+        .reverted;
+      console.log(
+        `🛑 Reverted if checking from selected 3D store for collection 31, for a different NFT Collection`
+      );
       console.log("---------------------------------------");
     });
   });
