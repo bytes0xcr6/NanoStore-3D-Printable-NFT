@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Unlicense
 
 pragma solidity 0.8.17;
+// @author eXplorins (Cristian Richarte Gil)
+// @title NanoStore 3D printable NFT collections
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
