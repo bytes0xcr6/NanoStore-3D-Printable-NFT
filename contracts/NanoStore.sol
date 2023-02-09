@@ -274,7 +274,7 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
      * - if `_tokenURIs[tokenId]` is NOT set, and if the parents do not have a
      *   uri value set, then the result is empty.
      */   
-    function uri(uint256256 _nFTCollection) public view override(ERC1155, ERC1155URIStorage) returns (string memory) {
+    function uri(uint256 _nFTCollection) public view override(ERC1155, ERC1155URIStorage) returns (string memory) {
         require(_nFTCollection != 0 && nFTcount >= _nFTCollection, "Wrong NFT Collection");
         return ERC1155URIStorage.uri(_nFTCollection);
     }
