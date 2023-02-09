@@ -4,7 +4,6 @@ pragma solidity 0.8.17;
 // @author eXplorins (Cristian Richarte Gil)
 // @title NanoStore 3D printable NFT collections
 
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155URIStorage.sol";
 
@@ -20,7 +19,7 @@ interface INFT3D{
     function checkStorePermission(uint256 _nFTCollection) external view returns(bool);
 }
 
-contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
+contract NanoStore is IERC1155, ERC1155URIStorage{
 
     // NFT Collection Struct to store all the NFT details.
     struct Collection {
@@ -274,7 +273,7 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
      * - if `_tokenURIs[tokenId]` is NOT set, and if the parents do not have a
      *   uri value set, then the result is empty.
      */   
-    function uri(uint256 _nFTCollection) public view override(ERC1155, ERC1155URIStorage) returns (string memory) {
+    function uri(uint256 _nFTCollection) public view override(ERC1155URIStorage) returns (string memory) {
         require(_nFTCollection != 0 && nFTcount >= _nFTCollection, "Wrong NFT Collection");
         return ERC1155URIStorage.uri(_nFTCollection);
     }
