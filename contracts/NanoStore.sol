@@ -10,14 +10,14 @@ import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155URIStorage.sol";
 
 interface INFT3D{
     function printNFT(
-        uint _nFTCollection, 
-        uint _amount, 
-        uint _size, 
-        uint _printingFee, 
+        uint256 _nFTCollection, 
+        uint256 _amount, 
+        uint256 _size, 
+        uint256 _printingFee, 
         address _printStore) external returns(bool);
-    function mintNFT(uint _amount, string memory _uri) external payable returns(bool);
-    function updateURI(uint _nfTCollection, string memory _newURI) external returns(bool);
-    function checkStorePermission(uint _nFTCollection) external view returns(bool);
+    function mintNFT(uint256 _amount, string memory _uri) external payable returns(bool);
+    function updateURI(uint256 _nfTCollection, string memory _newURI) external returns(bool);
+    function checkStorePermission(uint256 _nFTCollection) external view returns(bool);
 }
 
 contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
@@ -27,48 +27,48 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
         // NFT collection address.
         address creator;
         // Amount of NFTs created for a Colection Example. 10 Nike shoes of Collection 10.
-        uint nFTsMinted;
+        uint256 nFTsMinted;
         // Amount of NFTs remaining to be burned.
-        uint nFTsRemainingBurn;
+        uint256 nFTsRemainingBurn;
         // Fee that will be transfered to the creator after sending to print the NFT. (Wei)
-        uint creatorFee;
+        uint256 creatorFee;
     }
 
     // Owner Address
     address public nanoStore;
     // 1st NFT collection will be number 1 by default.
-    uint public nFTcount;
+    uint256 public nFTcount;
     // Fee for minting an NFT collection.
-    uint public mintingFee;
+    uint256 public mintingFee;
     // Fee for burning an NFT collection.
-    uint public burningFee;
+    uint256 public burningFee;
 
     // NFTidCollection -> Collection struct
-    mapping(uint => Collection) public CollectionIndex;
+    mapping(uint256 => Collection) public CollectionIndex;
     // NFTidCollection -> Request URI -> owner or creator -> Accepted.
-    mapping(uint => mapping(string => mapping(address => bool))) private changeURIRequest;
+    mapping(uint256 => mapping(string => mapping(address => bool))) private changeURIRequest;
     // Creator address => array of his NFT Collections ID.
-    mapping(address => uint[]) public collectionsPerAddress;
+    mapping(address => uint256[]) public collectionsPerAddress;
     // 3DPrintStore => NFTidCollection => If the Store was selected to print that NFTCollection
-    mapping(address => mapping(uint => bool)) private storeSelected;
+    mapping(address => mapping(uint256 => bool)) private storeSelected;
     // 3DPrintStore => If the address is a real Store
     mapping(address => bool) public isStore3D;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event NFT3DBurned(address indexed owner, uint nFTCollection, uint size, address printStore, uint burningTime);
+    event NFT3DBurned(address indexed owner, uint256 nFTCollection, uint256 size, address printStore, uint256 burningTime);
     event NFTMinted(address indexed owner, 
-    uint nFTCollection, 
-    uint numberCollectionsCreator, 
-    uint amount, 
-    uint creatorFee, 
-    uint mintingTime);
-    event BaseURIUpdated(string baseURI,uint updateTime);
-    event MintingFeeUpdated(uint newMintingFee, uint updateTime); 
-    event BurningFeeUpdated(uint newBurningFee, uint updateTime); 
-    event NewCreator(address indexed creator, uint firstCreationTime);
-    event FoundsWithdrawn(address indexed owner, uint ethersWithdrawn, uint withdrawnTime);
-    event UriUpdateRequested(address indexed solicitant, uint nFTCollection, string newURI, uint updateTime);
-    event UriUpdated(address indexed approver, uint nFTCollection, string newURI, uint updateTime);
+    uint256 nFTCollection, 
+    uint256 numberCollectionsCreator, 
+    uint256 amount, 
+    uint256 creatorFee, 
+    uint256 mintingTime);
+    event BaseURIUpdated(string baseURI,uint256 updateTime);
+    event MintingFeeUpdated(uint256 newMintingFee, uint256 updateTime); 
+    event BurningFeeUpdated(uint256 newBurningFee, uint256 updateTime); 
+    event NewCreator(address indexed creator, uint256 firstCreationTime);
+    event FoundsWithdrawn(address indexed owner, uint256 ethersWithdrawn, uint256 withdrawnTime);
+    event UriUpdateRequested(address indexed solicitant, uint256 nFTCollection, string newURI, uint256 updateTime);
+    event UriUpdated(address indexed approver, uint256 nFTCollection, string newURI, uint256 updateTime);
 
 
     /**
@@ -90,7 +90,7 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
      * @param _uri: Uri we want to set as the default TOKEN URI when burned.
      * @param _creatorFee: Fee for the creator when burning his NFT.
      */
-    function mintNFT(uint _amount, string memory _uri, uint _creatorFee) external payable returns(bool){
+    function mintNFT(uint256 _amount, string memory _uri, uint256 _creatorFee) external payable returns(bool){
         require(msg.value >= mintingFee, "You need to pay Minting Fee");    
         require(bytes(_uri).length > 0, "Add a Token URI");
         payable(address(this)).transfer(msg.value);
@@ -136,10 +136,10 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
      3000000000000000000 Total Weis sent when printing.
      */
     function printNFT(
-        uint _nFTCollection, 
-        uint _amount, 
-        uint _size, 
-        uint _printingFee, 
+        uint256 _nFTCollection, 
+        uint256 _amount, 
+        uint256 _size, 
+        uint256 _printingFee, 
         address _printStore
         ) external payable returns(bool){
         Collection memory NFTDetails = CollectionIndex[_nFTCollection];
@@ -164,7 +164,7 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
      * @param _access: Result for the elegibility of the 3D Print Store.
      */
     function store3DElegible(address[] memory _printStores, bool _access) external onlyOwner returns(bool){
-        for(uint i; i < _printStores.length; i++){
+        for(uint256 i; i < _printStores.length; i++){
             isStore3D[_printStores[i]] = _access;
         }
         return true;
@@ -175,7 +175,7 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
      * @param _amount: Amount in Ethers choosen to withdrawn.
      * @param _to: Who the funds will be transfer to.
      */
-    function withdrawnFunds(uint _amount, address _to) external onlyOwner returns(bool) {
+    function withdrawnFunds(uint256 _amount, address _to) external onlyOwner returns(bool) {
         require(_to != address(0), "Address cannot be 0");
         payable(_to).transfer(_amount);
 
@@ -188,7 +188,7 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
      * @param _nFTCollection: NFT Collection Identifier.
      * @param _newURI: New URI we want to update for the NFT Collection ID.
      */
-    function updateURI(uint _nFTCollection, string memory _newURI) external returns(bool) {
+    function updateURI(uint256 _nFTCollection, string memory _newURI) external returns(bool) {
         require(nanoStore == msg.sender || 
         CollectionIndex[_nFTCollection].creator == msg.sender, "You can`t update URI");
         require(!changeURIRequest[_nFTCollection][_newURI][msg.sender], "You already approved");
@@ -209,7 +209,7 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
      * @dev Setter for the Minting fee the creator needs to pay per collection
      * @param _newMintingFee: New Fee to set.
      */
-    function updateMintFee(uint _newMintingFee) external onlyOwner returns(bool){
+    function updateMintFee(uint256 _newMintingFee) external onlyOwner returns(bool){
         mintingFee = _newMintingFee;
         emit MintingFeeUpdated(_newMintingFee, block.timestamp);
         return true;
@@ -220,7 +220,7 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
      * @param _newBurningFee: New Fee to set. The number should be from 1 to 100. 
      *                        The remaining to 100 will be the % for the printing Store.
      */
-    function updateBurningFee(uint _newBurningFee) external onlyOwner returns(bool){
+    function updateBurningFee(uint256 _newBurningFee) external onlyOwner returns(bool){
         burningFee = _newBurningFee;
         emit BurningFeeUpdated(_newBurningFee, block.timestamp);
         return true;
@@ -253,7 +253,7 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
      * @dev Getter to check if the msg.sender has permissions to see the password to encrypt the URI.
      * @param _nFTCollection: NFT Collection Identifier.
      */
-    function checkStorePermission(uint _nFTCollection) external view returns(bool){
+    function checkStorePermission(uint256 _nFTCollection) external view returns(bool){
         require(storeSelected[msg.sender][_nFTCollection], "You are not elegible to print this NFTID");
         return true;
     }
@@ -274,7 +274,7 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
      * - if `_tokenURIs[tokenId]` is NOT set, and if the parents do not have a
      *   uri value set, then the result is empty.
      */   
-    function uri(uint256 _nFTCollection) public view override(ERC1155, ERC1155URIStorage) returns (string memory) {
+    function uri(uint256256 _nFTCollection) public view override(ERC1155, ERC1155URIStorage) returns (string memory) {
         require(_nFTCollection != 0 && nFTcount >= _nFTCollection, "Wrong NFT Collection");
         return ERC1155URIStorage.uri(_nFTCollection);
     }
