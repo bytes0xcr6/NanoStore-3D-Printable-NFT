@@ -37,7 +37,7 @@ contract NanoStore is IERC1155, ERC1155, ERC1155URIStorage{
     // Owner Address
     address public nanoStore;
     // 1st NFT collection will be number 1 by default.
-    uint private nFTcount;
+    uint public nFTcount;
     // Fee for minting an NFT collection.
     uint public mintingFee;
     // Fee for burning an NFT collection.
