@@ -143,7 +143,9 @@ contract NanoStore is IERC1155, ERC1155URIStorage{
      1000000000000000000 Printing Price for PrinterStore3D (Added from the font after checking the printing measures)
      --------------
      3000000000000000000 Total Weis sent when printing.
-     */
+
+       ** In case there is a social organization address set, it will send the set fee to the address.
+     */S
     function printNFT(
         uint256 _nFTCollection, 
         uint256 _amount, 
