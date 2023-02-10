@@ -21,6 +21,15 @@ Minimize the environmental impact of lifestyle e-commerce, by altering the value
 - <a href="https://mumbai.polygonscan.com/address/0x26478E66df15D9eB2E8fDc9267f0b6e8d2EDbc78">Mumbai testnet NanoStore contract</a>
 - <a href="https://testnets.opensea.io/collection/unidentified-contract-wf5kiypgik">OpenSea Mumbai (NanoStore contract)</a>
 
+## Contract tested through:
+
+- Remix. ✅
+- Slither (Static Analyzer). ✅
+- Solhint (Advance Linter). ✅
+- Compatibility with Marketplaces. ✅
+- Unit tests. ✅
+- Solidity coverage. ✅
+
 
 # Smart contract Workflow
 
