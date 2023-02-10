@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Unlicense
 
-pragma solidity 0.8.17;
+pragma solidity 0.8.18;
 // @author eXplorins (Cristian Richarte Gil)
 // @title NanoStore 3D printable NFT collections
 
