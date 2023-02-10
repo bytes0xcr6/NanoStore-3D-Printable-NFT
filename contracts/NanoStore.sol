@@ -54,13 +54,17 @@ contract NanoStore is IERC1155, ERC1155URIStorage{
     mapping(address => bool) public isStore3D;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event NFT3DBurned(address indexed owner, uint256 nFTCollection, uint256 size, address printStore, uint256 burningTime);
+    event NFT3DBurned(address indexed owner, 
+        uint256 nFTCollection, 
+        uint256 size, 
+        address printStore, 
+        uint256 burningTime);
     event NFTMinted(address indexed owner, 
-    uint256 nFTCollection, 
-    uint256 numberCollectionsCreator, 
-    uint256 amount, 
-    uint256 creatorFee, 
-    uint256 mintingTime);
+        uint256 nFTCollection, 
+        uint256 numberCollectionsCreator, 
+        uint256 amount, 
+        uint256 creatorFee, 
+        uint256 mintingTime);
     event BaseURIUpdated(string baseURI,uint256 updateTime);
     event MintingFeeUpdated(uint256 newMintingFee, uint256 updateTime); 
     event BurningFeeUpdated(uint256 newBurningFee, uint256 updateTime); 
