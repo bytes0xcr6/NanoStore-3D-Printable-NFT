@@ -33,14 +33,19 @@ contract NanoStore is IERC1155, ERC1155URIStorage{
         uint256 creatorFee;
     }
 
-    // Owner Address
+    // Owner Address.
     address public nanoStore;
+    // Social Organization Address.
+    address public socialOrg;
     // 1st NFT collection will be number 1 by default.
     uint256 public nFTcount;
     // Fee for minting an NFT collection.
     uint256 public mintingFee;
     // Fee for burning an NFT collection.
     uint256 public burningFee;
+    // Fee for social benefits.
+    uint256 public socialOrgFee;
+
 
     // NFTidCollection -> Collection struct
     mapping(uint256 => Collection) public CollectionIndex;
@@ -68,6 +73,8 @@ contract NanoStore is IERC1155, ERC1155URIStorage{
     event BaseURIUpdated(string baseURI,uint256 updateTime);
     event MintingFeeUpdated(uint256 newMintingFee, uint256 updateTime); 
     event BurningFeeUpdated(uint256 newBurningFee, uint256 updateTime); 
+    event SocialFeeUpdated(uint256 newFee, uint256 updateTime);
+    event SocialOrgaUpdated(address indexed newSocialOrg, uint256 updateTime);
     event NewCreator(address indexed creator, uint256 firstCreationTime);
     event FoundsWithdrawn(address indexed owner, uint256 ethersWithdrawn, uint256 withdrawnTime);
     event UriUpdateRequested(address indexed solicitant, uint256 nFTCollection, string newURI, uint256 updateTime);
@@ -93,12 +100,11 @@ contract NanoStore is IERC1155, ERC1155URIStorage{
      * @param _uri: Uri we want to set as the default TOKEN URI when burned.
      * @param _creatorFee: Fee for the creator when burning his NFT.
      */
-    function mintNFT(uint256 _amount, string memory _uri, uint256 _creatorFee) external payable returns(bool){
+    function mintNFT(uint256 _amount, string memory _uri, uint256 _creatorFee) external payable{
         require(msg.value >= mintingFee, "You need to pay Minting Fee");    
         require(bytes(_uri).length > 0, "Add a Token URI");
         payable(address(this)).transfer(msg.value);
         ++nFTcount;
-        _mint(msg.sender, nFTcount, _amount, "");
         Collection memory newCollection;
         newCollection.nFTsMinted = _amount;
         newCollection.nFTsRemainingBurn = _amount;
@@ -107,6 +113,7 @@ contract NanoStore is IERC1155, ERC1155URIStorage{
         CollectionIndex[nFTcount] = newCollection;
         collectionsPerAddress[msg.sender].push(nFTcount);
         _setURI(nFTcount, _uri);
+        _mint(msg.sender, nFTcount, _amount, "");
         
         emit NFTMinted(msg.sender, 
         nFTcount, 
@@ -114,7 +121,6 @@ contract NanoStore is IERC1155, ERC1155URIStorage{
         _amount, 
         _creatorFee, 
         block.timestamp);
-        return true;
     }
 
     /**
@@ -144,21 +150,28 @@ contract NanoStore is IERC1155, ERC1155URIStorage{
         uint256 _size, 
         uint256 _printingFee, 
         address _printStore
-        ) external payable returns(bool){
+        ) external payable{
         Collection memory NFTDetails = CollectionIndex[_nFTCollection];
         // Requirement for 3DStore Fee, NanoStore Fee & Creator Fee.
-        require(msg.value >= burningFee + NFTDetails.creatorFee, "Pay more printingFee");
+        require(msg.value > burningFee + NFTDetails.creatorFee + socialOrgFee, "Pay more printingFee");
         require(isStore3D[_printStore], "Choose another 3DPrintStore");
         require(_nFTCollection != 0 && nFTcount >= _nFTCollection, "Wrong NFT Collection");
         _burn(msg.sender, _nFTCollection, _amount);
         CollectionIndex[_nFTCollection].nFTsRemainingBurn -= _amount;
         storeSelected[_printStore][_nFTCollection] = true;
-        payable(NFTDetails.creator).transfer(NFTDetails.creatorFee); // Fee stablished by the Creator
         payable(address(this)).transfer(burningFee); // Burning Fee for NanoStore.
-        payable(_printStore).transfer((_printingFee) - (NFTDetails.creatorFee + burningFee)); // Printing price for 3D Printer Store
+        payable(NFTDetails.creator).transfer(NFTDetails.creatorFee); // Fee stablished by the Creator.
+
+        // Check in case there is not any Social Organization
+        if(socialOrg != address(0)){ 
+            payable(socialOrg).transfer(socialOrgFee); // Fee for the Social Organization.
+            payable(_printStore).transfer((_printingFee) - (NFTDetails.creatorFee + burningFee + socialOrgFee)); // Printing price for 3D Printer Store
+        }else {
+            payable(_printStore).transfer((_printingFee) - (NFTDetails.creatorFee + burningFee)); // Printing price for 3D Printer Store
+
+        }
 
         emit NFT3DBurned(msg.sender, _nFTCollection, _size, _printStore, block.timestamp);
-        return true;
     }
 
     /**
@@ -179,12 +192,11 @@ contract NanoStore is IERC1155, ERC1155URIStorage{
      * @param _amount: Amount in Ethers choosen to withdrawn.
      * @param _to: Who the funds will be transfer to.
      */
-    function withdrawnFunds(uint256 _amount, address _to) external onlyOwner returns(bool) {
+    function withdrawnFunds(uint256 _amount, address _to) external onlyOwner{
         require(_to != address(0), "Address cannot be 0");
         payable(_to).transfer(_amount);
 
         emit FoundsWithdrawn(msg.sender, _amount, block.timestamp);
-        return true;
     }
 
     /**
@@ -192,7 +204,7 @@ contract NanoStore is IERC1155, ERC1155URIStorage{
      * @param _nFTCollection: NFT Collection Identifier.
      * @param _newURI: New URI we want to update for the NFT Collection ID.
      */
-    function updateURI(uint256 _nFTCollection, string memory _newURI) external returns(bool) {
+    function updateURI(uint256 _nFTCollection, string memory _newURI) external{
         require(nanoStore == msg.sender || 
         CollectionIndex[_nFTCollection].creator == msg.sender, "You can`t update URI");
         require(!changeURIRequest[_nFTCollection][_newURI][msg.sender], "You already approved");
@@ -205,18 +217,15 @@ contract NanoStore is IERC1155, ERC1155URIStorage{
         }else  {
             emit UriUpdateRequested(msg.sender, _nFTCollection, _newURI, block.timestamp);
         }
-
-        return true;
     }
 
     /**
      * @dev Setter for the Minting fee the creator needs to pay per collection
      * @param _newMintingFee: New Fee to set.
      */
-    function updateMintFee(uint256 _newMintingFee) external onlyOwner returns(bool){
+    function updateMintFee(uint256 _newMintingFee) external onlyOwner{
         mintingFee = _newMintingFee;
         emit MintingFeeUpdated(_newMintingFee, block.timestamp);
-        return true;
     }
 
     /**
@@ -224,20 +233,37 @@ contract NanoStore is IERC1155, ERC1155URIStorage{
      * @param _newBurningFee: New Fee to set. The number should be from 1 to 100. 
      *                        The remaining to 100 will be the % for the printing Store.
      */
-    function updateBurningFee(uint256 _newBurningFee) external onlyOwner returns(bool){
+    function updateBurningFee(uint256 _newBurningFee) external onlyOwner{
         burningFee = _newBurningFee;
         emit BurningFeeUpdated(_newBurningFee, block.timestamp);
-        return true;
     }
 
     /**
      * @dev Setter function for updating the BASE URI.
      * @param _baseURI: New URI to Set.
      */
-    function updateBaseURI(string memory _baseURI) public onlyOwner returns(bool){
+    function updateBaseURI(string memory _baseURI) external onlyOwner{
         _setBaseURI(_baseURI);
         emit BaseURIUpdated(_baseURI, block.timestamp);
-        return true;
+    }
+
+    /**
+     * @dev Setter for the Social organization address.
+     * @param _newOrg: New Organization address.
+     */
+    function updateSocialOrg(address _newOrg) external onlyOwner{
+        socialOrg = _newOrg;
+        emit SocialOrgaUpdated(_newOrg, block.timestamp);
+    }
+
+    /**
+     * @dev Setter for the Social organization fee.
+     * @param _newFee: New Fee to set. The number should be from 1 to 100. 
+     *                        The remaining to 100 will be the % for the printing Store.
+     */
+    function updateSocialFee(uint256 _newFee) external onlyOwner{
+        socialOrgFee = _newFee;
+        emit SocialFeeUpdated(_newFee, block.timestamp);
     }
 
     /**
@@ -245,12 +271,11 @@ contract NanoStore is IERC1155, ERC1155URIStorage{
      *      Can only be called by the current owner.
      * @param newOwner: New Owner address to set.
      */
-    function transferOwnership(address payable newOwner) external onlyOwner returns(bool){
+    function transferOwnership(address payable newOwner) external onlyOwner{
         require(newOwner != address(0), "New owner is the zero address");
         address oldOwner = nanoStore;
         nanoStore = newOwner;
         emit OwnershipTransferred(oldOwner, newOwner);
-        return true;
     }
 
     /**
