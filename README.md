@@ -30,14 +30,13 @@ Minimize the environmental impact of lifestyle e-commerce, by altering the value
 - Unit tests. ✅
 - Solidity coverage. ✅
 
-
 # Smart contract Workflow
 
 1. Deploy contract passing Base Uri.
 2. Set Minting Fee & Set Burning Fee (This fees will be kept in NanoStore contract for Withdrawn)
 3. Set 3D Printing Store whitelist addresses.
 4. Creators can mint, transfer & list their NFTs in any marketplace.
-5. NFT Holders can burn / send to print their NFTs. (This transaction will include a fee for Printing (for the 3D printing store), for Burning (for NanoStore) & royalties (for the creator), all these fees will be transferred automatically to the 3D Printing store, Creator address & NanoStore contract)
+5. NFT Holders can burn / send to print their NFTs. (This transaction will include a fee for Printing (for the 3D printing store), for Burning (for NanoStore) & royalties (for the creator), all these fees will be transferred automatically to the 3D Printing store, Creator address & NanoStore contract. Also to the Social organization in case it is set)
 6. The smart contract owner can withdraw the funds from the contract.
 7. Base URI can be updated by the owner.
 8. Token URI can be updated but the creator and the contract owner must agree.
