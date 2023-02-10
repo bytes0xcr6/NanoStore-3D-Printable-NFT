@@ -1,4 +1,4 @@
-# NanoStore 3D Printable NFT (Smart contract)
+# 👟 NanoStore 3D Printable NFT (Smart contract)
 
 ## Project Goal
 
