@@ -97,7 +97,7 @@ contract NanoStore is IERC1155, ERC1155URIStorage{
         require(msg.value >= mintingFee, "You need to pay Minting Fee");    
         require(bytes(_uri).length > 0, "Add a Token URI");
         payable(address(this)).transfer(msg.value);
-        nFTcount++;
+        ++nFTcount;
         _mint(msg.sender, nFTcount, _amount, "");
         Collection memory newCollection;
         newCollection.nFTsMinted = _amount;
@@ -167,8 +167,9 @@ contract NanoStore is IERC1155, ERC1155URIStorage{
      * @param _access: Result for the elegibility of the 3D Print Store.
      */
     function store3DElegible(address[] memory _printStores, bool _access) external onlyOwner returns(bool){
-        for(uint256 i; i < _printStores.length; i++){
+        for(uint256 i; i < _printStores.length;){
             isStore3D[_printStores[i]] = _access;
+            i++;
         }
         return true;
     }
