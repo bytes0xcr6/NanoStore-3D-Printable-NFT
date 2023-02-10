@@ -105,18 +105,19 @@ contract NanoStore is IERC1155, ERC1155URIStorage{
         require(bytes(_uri).length > 0, "Add a Token URI");
         payable(address(this)).transfer(msg.value);
         ++nFTcount;
+        uint256 count = nFTcount;
         Collection memory newCollection;
         newCollection.nFTsMinted = _amount;
         newCollection.nFTsRemainingBurn = _amount;
         newCollection.creator = msg.sender;
         newCollection.creatorFee = _creatorFee;
-        CollectionIndex[nFTcount] = newCollection;
-        collectionsPerAddress[msg.sender].push(nFTcount);
-        _setURI(nFTcount, _uri);
-        _mint(msg.sender, nFTcount, _amount, "");
+        CollectionIndex[count] = newCollection;
+        collectionsPerAddress[msg.sender].push(count);
+        _setURI(count, _uri);
+        _mint(msg.sender, count, _amount, "");
         
         emit NFTMinted(msg.sender, 
-        nFTcount, 
+        count, 
         collectionsPerAddress[msg.sender].length, 
         _amount, 
         _creatorFee, 
@@ -155,21 +156,23 @@ contract NanoStore is IERC1155, ERC1155URIStorage{
         ) external payable{
         Collection memory NFTDetails = CollectionIndex[_nFTCollection];
         // Requirement for 3DStore Fee, NanoStore Fee & Creator Fee.
-        require(msg.value > burningFee + NFTDetails.creatorFee + socialOrgFee, "Pay more printingFee");
+        uint256 burningFee_ = burningFee;
+        uint256 socialOrgFee_ = socialOrgFee;
+        require(msg.value > burningFee_ + NFTDetails.creatorFee + socialOrgFee_, "Pay more printingFee");
         require(isStore3D[_printStore], "Choose another 3DPrintStore");
         require(_nFTCollection != 0 && nFTcount >= _nFTCollection, "Wrong NFT Collection");
         _burn(msg.sender, _nFTCollection, _amount);
         CollectionIndex[_nFTCollection].nFTsRemainingBurn -= _amount;
         storeSelected[_printStore][_nFTCollection] = true;
-        payable(address(this)).transfer(burningFee); // Burning Fee for NanoStore.
+        payable(address(this)).transfer(burningFee_); // Burning Fee for NanoStore.
         payable(NFTDetails.creator).transfer(NFTDetails.creatorFee); // Fee stablished by the Creator.
 
         // Check in case there is not any Social Organization
         if(socialOrg != address(0)){ 
-            payable(socialOrg).transfer(socialOrgFee); // Fee for the Social Organization.
-            payable(_printStore).transfer((_printingFee) - (NFTDetails.creatorFee + burningFee + socialOrgFee)); // Printing price for 3D Printer Store
+            payable(socialOrg).transfer(socialOrgFee_); // Fee for the Social Organization.
+            payable(_printStore).transfer((_printingFee) - (NFTDetails.creatorFee + burningFee_ + socialOrgFee_)); // Printing price for 3D Printer Store
         }else {
-            payable(_printStore).transfer((_printingFee) - (NFTDetails.creatorFee + burningFee)); // Printing price for 3D Printer Store
+            payable(_printStore).transfer((_printingFee) - (NFTDetails.creatorFee + burningFee_)); // Printing price for 3D Printer Store
 
         }
 
